@@ -38,13 +38,12 @@ quotes["quote"] = quotes["historical"].map(lambda x: x["adjClose"])
 '''
 
 
-style="border: 1px solid #999;"
+#style="border: 1px solid #999;"
+#, style='text-center mb-3 p-3')
 
 app_ui = ui.page_fluid(
-    ui.row(
-        ui.column(12, ui.h3("Value investing Shiny App"), style=style)),
-    ui.row(
-        ui.column(4, 
+    ui.h2("Value Investing Shiny App"),
+    ui.layout_sidebar(
         ui.panel_sidebar(
             ui.input_text(
                 "api_key", 
@@ -56,31 +55,33 @@ app_ui = ui.page_fluid(
                 "Select stock:", 
                 placeholder = "Ticker"
             ),
-            ui.input_text(
-                "quarter", 
-                "Quarters", 
-                placeholder = "Quarters"
+            ui.input_radio_buttons(
+                id="quarter",
+                label="Quarters:",
+                choices=["16", "32", "40"],
+                selected="40"
             ),
             ui.input_action_button(
                 "boton",
                 "Update Analysis"
                 , class_="btn-primary w-100"
                 ),
-            ui.output_text("compute")), style=style),
-        ui.column(8, ui.output_plot("historical_quotes"), style=style),
-    ),
-    ui.row(
-        ui.column(6,ui.output_plot("margen_operativo_plot"), style=style),
-        ui.column(6,ui.output_plot("deuda_plot"), style=style),
-    ),
-    ui.row(
-        ui.column(6,ui.output_plot("ganancia_retenida_plot"), style=style),
-        ui.column(6,ui.output_plot("eva_plot"), style=style),
-    ),
-    ui.row(
-        ui.column(6,ui.output_plot("bancarrota_plot"), style=style),
-        ui.column(6,ui.output_plot("beneish_plot"), style=style)
-    ),
+            ui.output_text("compute")),
+        ui.panel_main(            
+            ui.row(ui.output_plot("historical_quotes")),
+            ui.row(
+                ui.column(6,ui.output_plot("margen_operativo_plot")),
+                ui.column(6,ui.output_plot("deuda_plot")),
+            ),
+            ui.row(
+                ui.column(6,ui.output_plot("ganancia_retenida_plot")),
+                ui.column(6,ui.output_plot("eva_plot")),
+            ),
+            ui.row(
+                ui.column(6,ui.output_plot("bancarrota_plot")),
+                ui.column(6,ui.output_plot("beneish_plot"))
+            )),
+    )
 )
 
 
@@ -136,7 +137,7 @@ def server(input, output, session):
         quotes_df = quotes_df.sort_values(by="date")
         today = datetime.today()
         today = today.strftime("%Y-%m-%d")
-        quotes_df = quotes_df[(quotes_df['date'] > '2013-01-01') & (quotes_df['date'] < today)]
+        quotes_df = quotes_df[(quotes_df['date'] > '2022-09-01') & (quotes_df['date'] < today)]
 
         balance_sheet['date'] = pd.to_datetime(balance_sheet['date'], errors='coerce')
         income_statement['date'] = pd.to_datetime(income_statement['date'], errors='coerce')
@@ -364,6 +365,7 @@ def server(input, output, session):
         x = quotes()["date"]
         y = quotes()["quote"]
         plt.plot(x,y) 
+        plt.xticks(rotation=45)
         ax.set_title(f"{input.ticker()} - Stock price over time")
         return fig
 
@@ -383,8 +385,9 @@ def server(input, output, session):
         y = income()["margen_operativo"]
         #Linear regression plot
         plt.plot(x, fit_function(xp))
-        plt.plot(x,y) 
-        ax.set_title(f"{input.ticker()} - Margen Operativo history")
+        plt.plot(x,y)
+        plt.xticks(rotation=45) 
+        ax.set_title(f"{input.ticker()} - Operative Margin")
         return fig
 
     # Chart logic
@@ -398,7 +401,8 @@ def server(input, output, session):
         x = balance()["date"]
         y = balance()["Ratio_Endeudamiento"]  
         plt.plot(x,y)
-        ax.set_title(f"{input.ticker()} - Ratio de Endeudamiento history")
+        plt.xticks(rotation=45)
+        ax.set_title(f"{input.ticker()} - Debt rate")
         
         return fig
 
@@ -413,7 +417,8 @@ def server(input, output, session):
         x = balance()["date"]
         y = balance()["Creci_gan_retenida"] 
         plt.plot(x,y)
-        ax.set_title(f"{input.ticker()} - Crecimiento de ganancia retenida history")
+        plt.xticks(rotation=45)
+        ax.set_title(f"{input.ticker()} - Growth of retaining Earnings")
         
         return fig
 
@@ -429,6 +434,7 @@ def server(input, output, session):
         x = return_anal()["date"]
         y = return_anal()["PV_EVA"] 
         plt.plot(x,y)
+        plt.xticks(rotation=45)
         ax.set_title(f"{input.ticker()} - EVA history")
         
         return fig
@@ -444,6 +450,7 @@ def server(input, output, session):
         x = bancarrota()["date"]
         y = bancarrota()["Altman_z-Score"] 
         plt.plot(x,y)
+        plt.xticks(rotation=45)
         ax.set_title(f"{input.ticker()} - Altman Z-Score history")
         
         return fig
@@ -459,6 +466,7 @@ def server(input, output, session):
         x = beneish()["date"]
         y = beneish()["beneish_m_score"] 
         plt.plot(x,y)
+        plt.xticks(rotation=45)
         ax.set_title(f"{input.ticker()} - Beneish M-Score history")
         
         return fig
