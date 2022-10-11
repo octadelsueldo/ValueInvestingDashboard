@@ -30,16 +30,7 @@ try:
 except ImportError:
 # Fall back to Python 2's urllib2
     from urllib3 import urlopen 
-'''
-r= requests.get("https://financialmodelingprep.com/api/v3/historical-price-full/{}?apikey={}".format('AAPL'))
-quotes =  pd.DataFrame.from_dict(r.json())
-quotes["date"] = quotes["historical"].map(lambda x: x['date'])
-quotes["quote"] = quotes["historical"].map(lambda x: x["adjClose"])
-'''
 
-
-#style="border: 1px solid #999;"
-#, style='text-center mb-3 p-3')
 
 app_ui = ui.page_fluid(
     ui.h2("Value Investing Shiny App"),
@@ -169,37 +160,7 @@ def server(input, output, session):
         income_analysis["crecimiento_ventas"] = income_analysis["crecimiento_ventas"].fillna(0)
         income_analysis["margen_bruto"] = financial_ratios["grossProfitMargin"]
         income_analysis["margen_operativo"] = financial_ratios["operatingProfitMargin"]
-        income_analysis["margen_neto"]= financial_ratios["netProfitMargin"]
-        income_analysis["investigacion_desarrollo"] = income_statement["researchAndDevelopmentExpenses"] / income_statement["operatingIncome"]
-        income_analysis["tasa_impositiva"] = np.where(income_statement["incomeBeforeTax"] >= 0,(income_statement["incomeTaxExpense"] / income_statement["incomeBeforeTax"]), -(income_statement["incomeTaxExpense"] / income_statement["incomeBeforeTax"]))
-        income_analysis["intereses/EBIT"] = income_statement["interestExpense"] / income_statement["operatingIncome"]
-        income_analysis["Consistencia_EPS"] = income_statement["epsdiluted"]
-        ### Crecimiento de ventas
-        # working with datetime...
-        income_analysis['date_int'] = pd.to_datetime(income_analysis['date']).dt.strftime('%Y%m%d').astype(int)
-        sales_growth_slope = np.polyfit(income_analysis["date_int"],income_analysis["crecimiento_ventas"], 1)
-        slope = sales_growth_slope[0]
-        sales_growth= pow(10, slope - 1)
-        sales_growth_target = np.where(sales_growth > 0, 1,0)
-        ### Margen Bruto
-        margen_bruto = mean(income_analysis["margen_bruto"])
-        margen_bruto_target = np.where(margen_bruto >= 0.40, 1, 0)
-        ### Margen Operativo
-        margen_operativo_slope = np.polyfit(income_analysis["date_int"],income_analysis["margen_operativo"], 1)[0]
-        margen_operativo_target = np.where(margen_operativo_slope > 0, 1, 0)
-        ### Margen Neto
-        margen_neto = mean(income_analysis["margen_neto"])
-        margen_neto_target = np.where(margen_neto >= 0.20, 1, 0)
-        ### Investigación y desarrollo
-        investigacion_desarrollo = mean(income_analysis["investigacion_desarrollo"])
-        investigacion_desarrollo_target = np.where(investigacion_desarrollo < 0.33, 1, 0) 
-        ### intereses/EBIT
-        intereses_EBIT = mean(income_analysis["intereses/EBIT"])
-        intereses_EBIT_target = np.where(intereses_EBIT < 0.15, 1, 0)
-        ### Consistencia_EPS
-        consistencia_EPS_slope = np.polyfit(income_analysis["date_int"],income_analysis["Consistencia_EPS"], 1)[0]
-        consistencia_EPS_min = min(income_analysis["Consistencia_EPS"])
-        consistencia_EPS_target = np.where(consistencia_EPS_slope >= 0 and consistencia_EPS_min >= 0, 1, 0)
+        
         ########################################################################
         #### Analisis del balance sheet
         ########################################################################
@@ -210,49 +171,7 @@ def server(input, output, session):
         balance_analysis["Creci_gan_retenida"] = np.log(balance_sheet["retainedEarnings"])
         balance_analysis["Creci_gan_retenida"] = balance_analysis["Creci_gan_retenida"].replace([np.inf, -np.inf], 0)
         balance_analysis["Creci_gan_retenida"] = balance_analysis["Creci_gan_retenida"].fillna(0)
-        balance_analysis["rotacion_inventarios"] = income_statement["revenue"] / balance_sheet["inventory"]
-        balance_analysis["rotacion_inventarios"] = balance_analysis["rotacion_inventarios"].replace([np.inf, -np.inf], 0)
-        balance_analysis["rotacion_inventarios"] = balance_analysis["rotacion_inventarios"].fillna(0)
-        balance_analysis["exceso_de_caja"] = np.where(balance_sheet["cashAndShortTermInvestments"]>income_statement["revenue"]*0.05,balance_sheet["cashAndShortTermInvestments"] - income_statement["revenue"]*0.05,0 )
-        balance_analysis["rotacion_working_capital"] = income_statement["revenue"] / (balance_sheet["totalCurrentAssets"] - balance_analysis["exceso_de_caja"] - balance_sheet["accountPayables"])
-        balance_analysis["rotacion_working_capital"] = balance_analysis["rotacion_working_capital"].replace([np.inf, -np.inf], 0)
-        balance_analysis["rotacion_working_capital"] = balance_analysis["rotacion_working_capital"].fillna(0)
-        balance_analysis["rotacion_planta_equipos"] = income_statement["revenue"] / balance_sheet["propertyPlantEquipmentNet"]
-        balance_analysis["rotacion_planta_equipos"] = balance_analysis["rotacion_planta_equipos"].replace([np.inf, -np.inf], 0)
-        balance_analysis["rotacion_planta_equipos"] = balance_analysis["rotacion_planta_equipos"].fillna(0)
-        balance_analysis["rotacion_activo_total"] = financial_ratios["assetTurnover"]
-        balance_analysis["rotacion_activo_total"] = balance_analysis["rotacion_activo_total"].replace([np.inf, -np.inf], 0)
-        balance_analysis["rotacion_activo_total"] = balance_analysis["rotacion_activo_total"].fillna(0)
-        balance_analysis["rotacion_capital_total"] = income_statement["revenue"] / (balance_sheet["totalAssets"] - (balance_sheet["longTermInvestments"] + balance_sheet["goodwillAndIntangibleAssets"] + balance_sheet["accountPayables"]))
-        balance_analysis["net-net"] = key_metrics["netCurrentAssetValue"]
-        ### Liquidez Corriente
-        liquidez_corriente_final = balance_analysis["Liquidez_Corriente"].iloc[0]
-        liquidez_corriente_target = np.where(liquidez_corriente_final >= 1, 1, 0)
-        ### Endeudamiento D/E
-        ratio_endeudamiento_final = balance_analysis["Ratio_Endeudamiento"].iloc[0]
-        ratio_endeudamiento_target = np.where(ratio_endeudamiento_final <= 0.5, 1, 0)
-        ### PasivoLP/Ganancia_neta
-        pasivoLP_ganancia_neta_final = balance_analysis["PasivoLP/Ganancia_neta"].iloc[0]
-        pasivoLP_ganancia_neta_target = np.where(pasivoLP_ganancia_neta_final <= 5, 1, 0)
-        ### Creci_gan_retenida
-        creci_gan_retenida_growth_slope = np.polyfit(income_analysis["date_int"],balance_analysis["Creci_gan_retenida"], 1)[0]
-        creci_gan_retenida_growth= pow(10, creci_gan_retenida_growth_slope - 1)
-        creci_gan_retenida_growth_target = np.where(creci_gan_retenida_growth > 0, 1,0)
-        ### Rotacion de Inventarios
-        rotacion_inventarios_slope = np.polyfit(income_analysis["date_int"],balance_analysis["rotacion_inventarios"], 1)[0]
-        rotacion_inventarios_growth_target = np.where(rotacion_inventarios_slope > 0, 1,0)
-        ### Rotacion de Working Capital
-        rotacion_working_capital_slope = np.polyfit(income_analysis["date_int"],balance_analysis["rotacion_working_capital"], 1)[0]
-        rotacion_working_capital_growth_target = np.where(rotacion_working_capital_slope > 0, 1,0)
-        ### Rotacion planta y equipos
-        rotacion_planta_equipos_slope = np.polyfit(income_analysis["date_int"],balance_analysis["rotacion_planta_equipos"], 1)[0]
-        rotacion_planta_equipos_growth_target = np.where(rotacion_planta_equipos_slope > 0, 1,0)
-        ### Rotacion del activo total
-        rotacion_activo_total_slope = np.polyfit(income_analysis["date_int"],balance_analysis["rotacion_activo_total"], 1)[0]
-        rotacion_activo_total_growth_target = np.where(rotacion_activo_total_slope > 0, 1,0)
-        ### Net/Net
-        net_net_final = balance_analysis["net-net"].iloc[0]
-        net_net_target = np.where(net_net_final >0, 1, 0)
+        
         ########################################################################
         #### Analisis de la rentabilidad
         ########################################################################
@@ -266,43 +185,7 @@ def server(input, output, session):
         return_analysis["EVA/Revenue"] = return_analysis["EVA"] / income_statement["revenue"]
         return_analysis["Facor_Capitalizacion"] = (1 + 0.15/4) ** return_analysis.index
         return_analysis["PV_EVA"] = return_analysis["Facor_Capitalizacion"] * return_analysis["EVA"]
-        return_analysis["PV_FCFF"] = return_analysis["Facor_Capitalizacion"] * return_analysis["FCFF"]
-        ### ROIC
-        roic_average = mean(return_analysis["ROIC"])
-        roic_target = np.where(roic_average > 0.15, 1, 0)
-        ### EVA
-        eva_average = mean(return_analysis["PV_EVA"])
-        eva_target = np.where(eva_average > 0, 1, 0)
-        ### FCFF
-        fcff_average = mean(return_analysis["PV_FCFF"].iloc[1:-1])
-        fcff_target = np.where(fcff_average > 0, 1, 0)
-        ### EVA/Revenue
-        eva_revenue_average = mean(return_analysis["EVA/Revenue"])
-        eva_revenue_target = np.where(eva_revenue_average >= 0.05, 1, 0)
-        ########################################################################
-        #### Analisis del cashflow
-        ########################################################################
-        cash_flow_analysis = pd.DataFrame(cash_flow_statement, columns=["symbol", "date", "period"])
-        cash_flow_analysis["Bajas_adquisiciones"] = (cash_flow_statement["acquisitionsNet"] / income_statement["operatingIncome"]) 
-        cash_flow_analysis["Bajo_CAPEX"] = (cash_flow_statement["capitalExpenditure"] / income_statement["operatingIncome"]) 
-        cash_flow_analysis["Recompra_acciones"] = cash_flow_statement["commonStockRepurchased"]
-        cash_flow_analysis["Baja_depresiacion"] = (cash_flow_statement["depreciationAndAmortization"] / income_statement["grossProfit"]) 
-        cash_flow_analysis["OperationgCF/Operating_income"] = (cash_flow_statement["operatingCashFlow"] / income_statement["operatingIncome"]) 
-        ### Bajas adquisiciones
-        adquisiciones_average = mean(cash_flow_analysis["Bajas_adquisiciones"])
-        adquisiciones_target = np.where(adquisiciones_average <= 0.3333, 1, 0)
-        ### CAPEX
-        CAPEX_average = mean(cash_flow_analysis["Bajo_CAPEX"])
-        CAPEX_target = np.where(CAPEX_average <= 0.3333, 1, 0)
-        ### Recompra de acciones
-        recompra_acciones = sum(cash_flow_analysis["Recompra_acciones"])
-        recompra_acciones_target = np.where(recompra_acciones < 0, 1, 0)
-        ### Baja depresiacion
-        depresiacion_acciones_average = mean(cash_flow_analysis["Baja_depresiacion"])
-        depresiacion_acciones_target = np.where(depresiacion_acciones_average <= 7, 1, 0)
-        ### Operating CF/Operating Income
-        operatingCF_operatingIncome_average = mean(cash_flow_analysis["OperationgCF/Operating_income"])
-        operatingCF_operatingIncome_target = np.where(operatingCF_operatingIncome_average >= 50, 1, 0)
+        
         ########################################################################
         #### Analisis de bancarrota
         ########################################################################
@@ -316,11 +199,7 @@ def server(input, output, session):
         bancarrota_analysis["Altman_results"] = np.where(bancarrota_analysis["Altman_z-Score"] > 2.99, "Green zone", 
                                              np.where(bancarrota_analysis["Altman_z-Score"].between(1.81, 2.99, inclusive = True), "Grey Zone",  
                                              np.where(bancarrota_analysis["Altman_z-Score"] < 1.81, "Distress Zone", "None")))
-        ### Bancarrota Altman Z-Score
-        bancarrota_last = np.where(bancarrota_analysis["Altman_z-Score"] > 2.99, "Green zone", 
-                                             np.where(bancarrota_analysis["Altman_z-Score"].between(1.81, 2.99, inclusive = True), "Grey Zone",  
-                                             np.where(bancarrota_analysis["Altman_z-Score"] < 1.81, "Distress Zone", "None")))[0]
-        bancarrota_target = np.where(bancarrota_last == "Green zone", 1, 0)
+        
         ########################################################################
         #### Analisis de Beneish (Contabilidad Creativa)
         ########################################################################
@@ -333,15 +212,9 @@ def server(input, output, session):
         beneish_analysis["DepreciationIndex"] = (cash_flow_statement["depreciationAndAmortization"].shift(1) / balance_sheet["propertyPlantEquipmentNet"].shift(1)) / (cash_flow_statement["depreciationAndAmortization"] / balance_sheet["propertyPlantEquipmentNet"])
         beneish_analysis["beneish_m_score"] = -6.065+(0.823* beneish_analysis["DaysSalesReceibablesIndex"]) + (0.906*beneish_analysis["GrossMarginIndex"]) + (0.593*beneish_analysis["AssetQualityIndex"]) + (0.717*beneish_analysis["SalesGrowthIndex"]) + (0.107*beneish_analysis["DepreciationIndex"])
         beneish_analysis["beneish_resulta"] = np.where(beneish_analysis["beneish_m_score"] < -2.22, "OK Test", "Manipulator")
-        ### Beneish Score contabilidad creativa
-        beneish_last = np.where(beneish_analysis["beneish_resulta"].iloc[0] == "OK Test", 1, 0)
+       
         ##################################################################################
-        # Analisis Global de los principales indicadores
-        suma_de_KPIS = sales_growth_target + margen_bruto_target  + margen_operativo_target   + margen_neto_target + investigacion_desarrollo_target + intereses_EBIT_target + consistencia_EPS_target + liquidez_corriente_target + ratio_endeudamiento_target \
-         + pasivoLP_ganancia_neta_target + creci_gan_retenida_growth_target  + rotacion_inventarios_growth_target + rotacion_working_capital_growth_target + rotacion_planta_equipos_growth_target \
-         + rotacion_activo_total_growth_target  + net_net_target + roic_target + eva_target + fcff_target+ eva_revenue_target+ adquisiciones_target+ CAPEX_target  + recompra_acciones_target \
-         + depresiacion_acciones_target  + operatingCF_operatingIncome_target + bancarrota_target + beneish_last   
-        suma_de_principales_KPIS = margen_operativo_target + ratio_endeudamiento_target + creci_gan_retenida_growth_target +  eva_target + bancarrota_target + beneish_last 
+    
 
         ##actualizamos el dataset
         income.set(income_analysis)
